@@ -1,0 +1,76 @@
+# 1. Define the Objects
+
+type Item {
+  id: ID!
+  sku: String    # Added for resolver
+  name: String!
+  brand: String  # Added for resolver
+  priceCurrent: Float
+  priceRegular: Float # Added for resolver
+  priceLabel: String
+  category: String
+  imageUrl: String
+}
+
+type Recipe {
+  id: ID!
+  title: String!
+  instructions: String!
+  estimatedCost: Float
+  items: [Item!]
+  imageUrl: String
+}
+
+# 2. Define the Entry Points
+type Query {
+  login(email: String!, password: String!): AuthResponse!
+  suggestedRecipes: [Recipe!]!
+  items(search: String): [Item!]!
+  salesReceipt(limit: Int): [Item!]!
+}
+
+type User {
+  id: ID!
+  email: String!
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+# Add these new inputs
+
+input NewUser {
+  email: String!
+  password: String!
+  zipCode: String! # Added this field
+}
+
+input LoginUser {
+  email: String!
+  password: String!
+}
+
+type Plan {
+  id: ID!
+  age: Int!
+  gender: String!
+  activityLevel: String!
+  weeklyCalories: Int!
+  dailyProtein: Int!
+}
+
+# Update or Extend the Mutation type
+type Mutation {
+  signup(input: NewUser!): AuthPayload!
+  login(input: LoginUser!): AuthPayload!
+  updatePreferences(userID: ID!, zipCode: String, preferredStores: [String!]): Boolean!
+  savePlan(age: Int!, gender: String!, activityLevel: String!, weeklyCalories: Int!, dailyProtein: Int!): Plan!
+  sendWeeklyPlan(userId: ID!): Boolean!
+}
+
+type AuthResponse {
+  token: String!
+  user:  User!
+}
