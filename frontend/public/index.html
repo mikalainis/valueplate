@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #008080;
+    --berry: #ad3b5d;
+    --bg: #f4f7f7;
+    --card-bg: #ffffff;
+    --text-dark: #1a1c1d;
+    --text-muted: #7f8c8d;
+    --shadow: 0 12px 35px rgba(0,0,0,0.07);
+  }
+
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-dark); margin: 0; padding: 20px; line-height: 1.6; }
+
+  .servings-box { background: var(--card-bg); padding: 20px; border-radius: 20px; margin-bottom: 30px; display: flex; justify-content: center; gap: 25px; box-shadow: var(--shadow); }
+  .input-group { display: flex; align-items: center; gap: 12px; }
+  .input-group label { font-weight: 700; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+  .input-group input { width: 55px; padding: 8px; border: 2px solid #edf2f2; border-radius: 12px; text-align: center; font-weight: 800; color: var(--teal); }
+
+  .layout { display: grid; grid-template-columns: 1fr; gap: 25px; max-width: 1100px; margin: auto; }
+  @media (min-width: 992px) { .layout { grid-template-columns: 1.8fr 1fr; } }
+
+  .card { background: var(--card-bg); border-radius: 24px; margin-bottom: 20px; transition: all 0.3s ease; box-shadow: var(--shadow); overflow: hidden; }
+  .card.selected { border: 2px solid var(--teal); background: #faffff; }
+  .card-header { padding: 20px 25px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .card-header h3 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+
+  .details { display: none; padding: 0 25px 25px; border-top: 1px solid #f0f4f4; }
+  .details.active { display: block; padding-top: 20px; }
+  .recipe-price { background: rgba(173, 59, 93, 0.08); color: var(--berry); padding: 6px 14px; border-radius: 10px; font-weight: 800; display: inline-block; margin-bottom: 15px; font-size: 0.9rem; }
+  
+  .section-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--teal); letter-spacing: 1px; margin-top: 20px; display: block; }
+  .recipe-content { font-size: 0.85rem; margin: 10px 0 20px 0; color: #555; padding-left: 15px; line-height: 1.5; }
+
+  .btn { width: 100%; padding: 14px; border: none; background: #f0f4f4; color: var(--teal); border-radius: 14px; cursor: pointer; font-weight: 800; }
+  .btn.active { background: var(--teal); color: white; }
+
+  .sidebar { background: var(--card-bg); padding: 25px; border-radius: 24px; box-shadow: var(--shadow); position: sticky; top: 20px; }
+  .checklist-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid #f0f4f4; padding-bottom: 15px; }
+  .checklist-header h2 { margin: 0; font-weight: 800; font-size: 1.4rem; }
+  .count-badge { background: var(--teal); color: white; padding: 2px 10px; border-radius: 50px; font-size: 0.9rem; font-weight: 700; }
+
+  .dept-label { font-size: 0.65rem; color: var(--teal); font-weight: 800; margin-top: 25px; text-transform: uppercase; letter-spacing: 1px; border-left: 3px solid var(--teal); padding-left: 8px; }
+  .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f8fafa; gap: 10px; }
+  
+  .item-name-text { font-weight: 700; font-size: 0.95rem; color: var(--text-dark); display: block; }
+  .item-qty-text { font-weight: 500; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2px; }
+  .item-price-tag { font-size: 0.9rem; color: var(--berry); font-weight: 800; white-space: nowrap; }
+  .remove-x { color: #d1d8e0; cursor: pointer; font-weight: 800; padding: 0 5px; font-size: 1.1rem; }
+
+  .total-row { margin-top: 25px; padding: 20px; background: #faffff; border-radius: 18px; border: 2px dashed var(--teal); text-align: center; }
+  .total-row #final-sum { font-size: 1.8rem; font-weight: 800; color: var(--teal); }
+
+  .action-bar { display: none; margin-top: 20px; gap: 8px; grid-template-columns: repeat(3, 1fr); }
+  .action-btn { padding: 10px 5px; background: white; border: 1px solid #eee; border-radius: 10px; font-size: 0.7rem; font-weight: 800; color: var(--text-dark); cursor: pointer; transition: 0.2s; }
+  .action-btn:hover { border-color: var(--teal); color: var(--teal); background: #f0fdfa; }
+</style>
+</head>
+<body>
+
+<div class="servings-box">
+  <div class="input-group"><label>Adults</label><input type="number" id="adults" value="2" min="1" oninput="recalc()"></div>
+  <div class="input-group"><label>Kids</label><input type="number" id="kids" value="0" min="0" oninput="recalc()"></div>
+</div>
+
+<div class="layout">
+  <main id="recipe-list">
+    <div class="card" id="r1" data-items='[{"d":"Meat","n":"Spiral Smoked Ham","q":0.5,"u":"lbs","p":0.99},{"d":"Produce","n":"Green Asparagus","q":0.3,"u":"lbs","p":0.99},{"d":"Produce","n":"Sweet Potatoes","q":0.4,"u":"lbs","p":0.75}]'>
+      <div class="card-header" onclick="toggleExpand('r1')"><h3>Honey-Butter Ham Dinner</h3><span>▼</span></div>
+      <div class="details" id="details-r1">
+        <span class="recipe-price" id="p-r1"></span>
+        <span class="section-label">Ingredients</span><ul class="recipe-content" id="ing-list-r1"></ul>
+        <span class="section-label">Cooking Instructions</span>
+        <ol class="recipe-content">
+          <li><strong>Prep:</strong> Preheat oven to 325°F. Rub ham with butter and brown sugar.</li>
+          <li><strong>Sides:</strong> Roast sweet potato rounds for 20m. Add asparagus during final 15m.</li>
+        </ol>
+        <button class="btn" id="btn-r1" onclick="toggleRecipe('r1', event)">Add to List</button>
+      </div>
+    </div>
+
+    <div class="card" id="r2" data-items='[{"d":"Meat","n":"Prime Rib Roast","q":0.75,"u":"lbs","p":9.99},{"d":"Produce","n":"White Mushrooms","q":4,"u":"oz","p":0.29},{"d":"Produce","n":"Yellow Onions","q":2,"u":"oz","p":0.10}]'>
+      <div class="card-header" onclick="toggleExpand('r2')"><h3>Garlic Herb Prime Rib</h3><span>▼</span></div>
+      <div class="details" id="details-r2">
+        <span class="recipe-price" id="p-r2"></span>
+        <span class="section-label">Ingredients</span><ul class="recipe-content" id="ing-list-r2"></ul>
+        <span class="section-label">Cooking Instructions</span>
+        <ol class="recipe-content">
+          <li><strong>Roast:</strong> Rub meat with garlic/herbs. Roast at 450°F for 15m, then 325°F until 120°F internal.</li>
+          <li><strong>Sauce:</strong> Sauté onions and mushrooms in pan drippings.</li>
+        </ol>
+        <button class="btn" id="btn-r2" onclick="toggleRecipe('r2', event)">Add to List</button>
+      </div>
+    </div>
+
+    <div class="card" id="r3" data-items='[{"d":"Meat","n":"Atlantic Salmon Fillet","q":0.5,"u":"lbs","p":7.99},{"d":"Produce","n":"Romaine Hearts","q":1,"u":"ct","p":1.00},{"d":"Produce","n":"Green Asparagus","q":0.3,"u":"lbs","p":0.99}]'>
+      <div class="card-header" onclick="toggleExpand('r3')"><h3>Pan-Seared Salmon</h3><span>▼</span></div>
+      <div class="details" id="details-r3">
+        <span class="recipe-price" id="p-r3"></span>
+        <span class="section-label">Ingredients</span><ul class="recipe-content" id="ing-list-r3"></ul>
+        <span class="section-label">Cooking Instructions</span>
+        <ol class="recipe-content">
+          <li><strong>Salmon:</strong> Sear skin-side down for 5m. Flip and finish for 2m.</li>
+          <li><strong>Salad:</strong> Chop romaine and toss with lemon vinaigrette.</li>
+        </ol>
+        <button class="btn" id="btn-r3" onclick="toggleRecipe('r3', event)">Add to List</button>
+      </div>
+    </div>
+
+    <div class="card" id="r4" data-items='[{"d":"Produce","n":"Sweet Blueberries","q":0.25,"u":"pints","p":1.99},{"d":"Produce","n":"Navel Oranges","q":0.5,"u":"lbs","p":1.25}]'>
+      <div class="card-header" onclick="toggleExpand('r4')"><h3>Winter Fruit Salad</h3><span>▼</span></div>
+      <div class="details" id="details-r4">
+        <span class="recipe-price" id="p-r4"></span>
+        <span class="section-label">Ingredients</span><ul class="recipe-content" id="ing-list-r4"></ul>
+        <span class="section-label">Cooking Instructions</span>
+        <p class="recipe-content">Slice oranges into rounds and toss gently with fresh blueberries and a drizzle of honey.</p>
+        <button class="btn" id="btn-r4" onclick="toggleRecipe('r4', event)">Add to List</button>
+      </div>
+    </div>
+  </main>
+
+  <aside class="sidebar">
+    <div class="checklist-header"><h2>Checklist</h2><span id="item-count" class="count-badge" style="display:none">0</span></div>
+    <div id="list-display"></div>
+    <div id="total-area" class="total-row" style="display:none"><span>Estimated Total</span><div id="final-sum"></div></div>
+    <div class="action-bar" id="action-bar">
+      <button class="action-btn" onclick="printList()">Print</button>
+      <button class="action-btn" onclick="share('email')">Email</button>
+      <button class="action-btn" onclick="share('wa')">WhatsApp</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+  let masterList = [];
+  function toggleExpand(id) { const el = document.getElementById(`details-${id}`); const active = el.classList.contains('active'); document.querySelectorAll('.details').forEach(d => d.classList.remove('active')); if (!active) el.classList.add('active'); }
+  function toggleRecipe(rid, event) { if (event) event.stopPropagation(); const isAlreadyInList = masterList.some(i => i.rid === rid); if (isAlreadyInList) { masterList = masterList.filter(i => i.rid !== rid); } else { const card = document.getElementById(rid); const items = JSON.parse(card.dataset.items); items.forEach(item => { masterList.push({ uid: rid + "-" + item.n.replace(/\s+/g, ''), rid: rid, name: item.n, bq: item.q, unit: item.u, dept: item.d, p: item.p }); }); } recalc(); }
+  function removeItem(uid) { masterList = masterList.filter(item => item.uid !== uid); recalc(); }
+  function printList() { const scale = (parseInt(document.getElementById('adults').value) || 0) + ((parseInt(document.getElementById('kids').value) || 0) * 0.5); const listHtml = document.getElementById('list-display').innerHTML; const total = document.getElementById('final-sum').innerText; const printWin = window.open('', '', 'width=800,height=600'); printWin.document.write(`<html><head><title>Print List</title><style>body{font-family:sans-serif;padding:30px;}.list-item{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:10px 0;}.remove-x{display:none;}.dept-label{background:#f0f0f0;padding:5px;font-weight:bold;margin-top:15px;}.item-qty-text{color:#666;font-size:0.8em;}.item-name-text{font-weight:bold;display:block;}.total{margin-top:20px;font-size:1.5em;font-weight:bold;border-top:2px solid #000;text-align:right;}</style></head><body><h1>Shopping List</h1><div>${listHtml}</div><div class="total">Total: ${total}</div></body></html>`); printWin.document.close(); printWin.focus(); printWin.print(); printWin.close(); }
+  function share(type) { const scale = (parseInt(document.getElementById('adults').value) || 0) + ((parseInt(document.getElementById('kids').value) || 0) * 0.5); let msg = "Value Plate Shopping List:\n\n"; masterList.forEach(i => { msg += `- ${(i.bq * scale).toFixed(2)} ${i.unit} ${i.name}\n`; }); msg += `\nEstimated Total: ${document.getElementById('final-sum').innerText}`; if (type === 'email') window.location.href = `mailto:?subject=My Shopping List&body=${encodeURIComponent(msg)}`; else window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank'); }
+  function recalc() {
+    const scale = (parseInt(document.getElementById('adults').value) || 0) + ((parseInt(document.getElementById('kids').value) || 0) * 0.5);
+    const activeRids = new Set(masterList.map(i => i.rid));
+    document.querySelectorAll('.card').forEach(card => {
+        const rid = card.id; const items = JSON.parse(card.dataset.items); const btn = document.getElementById('btn-' + rid);
+        let total = 0; let ingHtml = "";
+        items.forEach(i => { total += (i.q * scale * i.p); ingHtml += `<li>${(i.q * scale).toFixed(2)} ${i.u} ${i.n}</li>`; });
+        document.getElementById('p-' + rid).innerText = "Est. Price: $" + total.toFixed(2);
+        document.getElementById('ing-list-' + rid).innerHTML = ingHtml;
+        if (activeRids.has(rid)) { card.classList.add('selected'); btn.innerText = "Remove"; btn.classList.add('active'); } 
+        else { card.classList.remove('selected'); btn.innerText = "Add to List"; btn.classList.remove('active'); }
+    });
+    const display = document.getElementById('list-display'); const badge = document.getElementById('item-count'); const actions = document.getElementById('action-bar');
+    badge.innerText = masterList.length; badge.style.display = masterList.length > 0 ? 'inline-block' : 'none'; actions.style.display = masterList.length > 0 ? 'grid' : 'none';
+    if (masterList.length === 0) { display.innerHTML = "List is empty."; document.getElementById('total-area').style.display = 'none'; return; }
+    const grouped = masterList.reduce((acc, i) => { if (!acc[i.dept]) acc[i.dept] = []; acc[i.dept].push(i); return acc; }, {});
+    let html = ""; let grandTotal = 0;
+    for (const d in grouped) {
+      html += `<div class="dept-label">${d}</div>`;
+      grouped[d].forEach(i => {
+        const cost = (i.bq * scale * i.p); grandTotal += cost;
+        html += `<div class="list-item"><div><span class="item-qty-text">${(i.bq * scale).toFixed(2)} ${i.unit}</span><span class="item-name-text">${i.name}</span></div><div style="display:flex; align-items:center;"><span class="item-price-tag">$${cost.toFixed(2)}</span><span class="remove-x" onclick="removeItem('${i.uid}')">×</span></div></div>`;
+      });
+    }
+    display.innerHTML = html; document.getElementById('final-sum').innerText = "$" + grandTotal.toFixed(2); document.getElementById('total-area').style.display = 'block';
+  }
+  recalc();
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyA006uKLAeHVUaDVXDhZLHq3Lq_UxZuHjU",
+    authDomain: "grocerysmart-853d9.firebaseapp.com",
+    projectId: "grocerysmart-853d9",
+    storageBucket: "grocerysmart-853d9.firebasestorage.app",
+    messagingSenderId: "731075290546",
+    appId: "1:731075290546:web:c9abf397dca5a01abcf0ab",
+    measurementId: "G-XH8BQT3WN2"
+  };
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+</body>
+</html>
