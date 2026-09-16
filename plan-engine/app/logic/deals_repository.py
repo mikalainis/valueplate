@@ -10,6 +10,25 @@ GROCERY_SALES_COLLECTION = "grocery_sales"
 METADATA_DOC = ("metadata", "summary")
 
 
+def _as_str(value: object) -> Optional[str]:
+    return None if value is None else str(value)
+
+
+def _as_float(value: object) -> Optional[float]:
+    # The scrape is inconsistent about whether prices are numbers or
+    # formatted strings like "$2.99" - see docs/existing-infrastructure.md §2.
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = value.strip().lstrip("$").replace(",", "")
+        if not value:
+            return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def fetch_deals(
     category: Optional[str] = None,
     q: Optional[str] = None,
@@ -39,14 +58,14 @@ def fetch_deals(
             {
                 "id": doc.id,
                 "name": name,
-                "brand": data.get("brand"),
+                "brand": _as_str(data.get("brand")),
                 "category": doc_category,
                 "store_id": doc_store_id,
-                "sale_price": data.get("price"),
-                "regular_price": data.get("regular_price"),
-                "unit": data.get("unit"),
-                "price_per_unit": data.get("price_per_unit"),
-                "image_url": data.get("image_url"),
+                "sale_price": _as_float(data.get("price")),
+                "regular_price": _as_float(data.get("regular_price")),
+                "unit": _as_str(data.get("unit")),
+                "price_per_unit": _as_str(data.get("price_per_unit")),
+                "image_url": _as_str(data.get("image_url")),
                 "valid_from": None,
                 "valid_to": None,
             }
