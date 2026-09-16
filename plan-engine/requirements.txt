@@ -3,3 +3,6 @@ uvicorn
 pydantic
 numpy
 pandas
+redis
+google-cloud-firestore
+python-dotenv

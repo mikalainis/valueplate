@@ -1,23 +1,88 @@
-from fastapi import FastAPI, Depends, HTTPException
-from typing import List
+from pathlib import Path
+from typing import List, Optional
+
 import redis
 import os
+from dotenv import load_dotenv
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env.local")
 
 # Import your existing logic
-from app.nutrition_calculator import NutritionCalculator, FamilyMember, NutritionNeeds
+from app.logic.nutrition_calculator import NutritionCalculator, FamilyMember, NutritionNeeds
+from app.logic.deals_repository import fetch_deals, fetch_last_scrape_time
 
 app = FastAPI()
 calc = NutritionCalculator()
 
+# Local dev only: allow the Vite dev server to call this API directly.
+# Tighten this before deploying anywhere real.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+
 # --- Shared Infrastructure ---
 def get_redis():
     return redis.Redis(
-        host=os.getenv("REDIS_HOST", "localhost"), 
-        port=6379, 
+        host=os.getenv("REDIS_HOST", "localhost"),
+        port=6379,
         decode_responses=True
     )
 
 # --- Routes ---
+
+
+class DealItem(BaseModel):
+    id: str
+    name: str
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    store_id: Optional[str] = None
+    sale_price: Optional[float] = None
+    regular_price: Optional[float] = None
+    unit: Optional[str] = None
+    price_per_unit: Optional[str] = None
+    image_url: Optional[str] = None
+    valid_from: Optional[str] = None
+    valid_to: Optional[str] = None
+
+
+class DealsResponse(BaseModel):
+    items: List[DealItem]
+    total: int
+    as_of: Optional[str] = None
+
+
+@app.get("/api/deals", response_model=DealsResponse)
+async def get_deals(
+    category: Optional[str] = None,
+    q: Optional[str] = None,
+    store_id: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """
+    Sale items from the existing shoprite_sales scrape (Firestore `grocery_sales`
+    — see docs/existing-infrastructure.md). No Postgres/§3 schema exists yet, so
+    this reads Firestore directly; regular_price/valid_from/valid_to are always
+    None today because the current scrape output doesn't carry them.
+    """
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+
+    matches = fetch_deals(category=category, q=q, store_id=store_id)
+    page = matches[offset : offset + limit]
+
+    return DealsResponse(
+        items=[DealItem(**item) for item in page],
+        total=len(matches),
+        as_of=fetch_last_scrape_time(),
+    )
 
 @app.post("/generate-optimized-plan")
 async def generate_plan(
