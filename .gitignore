@@ -47,6 +47,10 @@ build/Release
 # Dependency directories
 node_modules/
 
+# Python bytecode cache
+__pycache__/
+*.pyc
+
 # Optional npm cache directory
 .npm
 
@@ -64,6 +68,8 @@ node_modules/
 
 # dotenv environment variables file
 .env
+.env.local
+.env.*.local
 
 # dataconnect generated files
 .dataconnect
