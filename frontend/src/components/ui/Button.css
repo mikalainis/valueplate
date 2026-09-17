@@ -1,0 +1,60 @@
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target-min);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1.5px solid transparent;
+  font-family: inherit;
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast), transform var(--transition-fast);
+}
+
+.ui-btn:active {
+  transform: scale(0.98);
+}
+
+.ui-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.ui-btn--primary {
+  background: var(--color-teal-500);
+  color: var(--color-text-on-brand);
+}
+
+@media (hover: hover) {
+  .ui-btn--primary:hover:not(:disabled) {
+    background: var(--color-teal-600);
+  }
+}
+
+.ui-btn--secondary {
+  background: var(--color-surface);
+  border-color: var(--color-teal-500);
+  color: var(--color-teal-700);
+}
+
+@media (hover: hover) {
+  .ui-btn--secondary:hover:not(:disabled) {
+    background: var(--color-teal-50);
+  }
+}
+
+.ui-btn--ghost {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+@media (hover: hover) {
+  .ui-btn--ghost:hover:not(:disabled) {
+    background: var(--color-border);
+  }
+}

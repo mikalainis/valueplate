@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './DealsPage.css'
+import Card from './ui/Card'
+import PriceTag from './ui/PriceTag'
+import CategoryPill from './ui/CategoryPill'
+import SearchInput from './ui/SearchInput'
+import StoreSelect, { type StoreOption } from './ui/StoreSelect'
+import StoreFinder from './ui/StoreFinder'
+import EmptyState from './ui/EmptyState'
+import Button from './ui/Button'
+import { DealsGridSkeleton } from './ui/Skeleton'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 const PAGE_SIZE = 200
@@ -25,7 +34,29 @@ interface DealsResponse {
   as_of: string | null
 }
 
+interface StoreItem {
+  id: string
+  name: string | null
+  city: string | null
+  state: string | null
+}
+
+interface StoresResponse {
+  items: StoreItem[]
+}
+
 const UNCATEGORIZED = 'Uncategorized'
+const STORE_STORAGE_KEY = 'valueplate:selectedStore'
+
+function storeLabel(store: StoreItem): string {
+  const name = store.name || `Store #${store.id}`
+  // Most store names already are "ShopRite of {town}" - only append the town
+  // separately when it isn't already part of the name.
+  if (store.city && !name.toLowerCase().includes(store.city.toLowerCase())) {
+    return `${name} — ${store.city}`
+  }
+  return name
+}
 
 // The dataset is small (a few hundred rows) so we page through the whole
 // thing once on load and do filtering/grouping client-side from there.
@@ -47,9 +78,18 @@ async function fetchAllDeals(): Promise<{ items: DealItem[]; asOf: string | null
   return { items: all, asOf }
 }
 
+async function fetchStores(): Promise<StoreItem[]> {
+  const res = await fetch(`${API_BASE}/api/stores`)
+  if (!res.ok) throw new Error(`Failed to load stores (${res.status})`)
+  const data: StoresResponse = await res.json()
+  return data.items
+}
+
 export default function DealsPage() {
   const [items, setItems] = useState<DealItem[]>([])
   const [asOf, setAsOf] = useState<string | null>(null)
+  const [stores, setStores] = useState<StoreItem[]>([])
+  const [selectedStore, setSelectedStore] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [category, setCategory] = useState('all')
@@ -58,11 +98,15 @@ export default function DealsPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    fetchAllDeals()
-      .then(({ items, asOf }) => {
+    // Store names come from a separate, less critical lookup - if it fails,
+    // fall back to deriving bare store ids from the deals data itself rather
+    // than failing the whole page.
+    Promise.all([fetchAllDeals(), fetchStores().catch(() => [])])
+      .then(([{ items, asOf }, storeItems]) => {
         if (cancelled) return
         setItems(items)
         setAsOf(asOf)
+        setStores(storeItems)
         setError(null)
       })
       .catch((err: Error) => {
@@ -76,21 +120,51 @@ export default function DealsPage() {
     }
   }, [])
 
+  const storeOptions = useMemo<StoreOption[]>(() => {
+    if (stores.length > 0) {
+      return stores.map((s) => ({ id: s.id, label: storeLabel(s) }))
+    }
+    const ids = new Set<string>()
+    items.forEach((item) => {
+      if (item.store_id) ids.add(item.store_id)
+    })
+    return Array.from(ids)
+      .sort()
+      .map((id) => ({ id, label: `Store #${id}` }))
+  }, [stores, items])
+
+  useEffect(() => {
+    if (selectedStore !== null) return
+    if (storeOptions.length === 0) return
+    const saved = localStorage.getItem(STORE_STORAGE_KEY)
+    const initial = saved && storeOptions.some((s) => s.id === saved) ? saved : storeOptions[0].id
+    setSelectedStore(initial)
+  }, [storeOptions, selectedStore])
+
+  const persistStore = (id: string) => {
+    setSelectedStore(id)
+    localStorage.setItem(STORE_STORAGE_KEY, id)
+  }
+
   const categories = useMemo(() => {
     const set = new Set<string>()
-    items.forEach((item) => set.add(item.category || UNCATEGORIZED))
+    items.forEach((item) => {
+      if (selectedStore && item.store_id !== selectedStore) return
+      set.add(item.category || UNCATEGORIZED)
+    })
     return Array.from(set).sort()
-  }, [items])
+  }, [items, selectedStore])
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return items.filter((item) => {
+      if (selectedStore && item.store_id !== selectedStore) return false
       const itemCategory = item.category || UNCATEGORIZED
       if (category !== 'all' && itemCategory !== category) return false
       if (needle && !item.name.toLowerCase().includes(needle)) return false
       return true
     })
-  }, [items, category, search])
+  }, [items, selectedStore, category, search])
 
   const grouped = useMemo(() => {
     const map = new Map<string, DealItem[]>()
@@ -102,75 +176,165 @@ export default function DealsPage() {
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
   }, [filtered])
 
-  if (loading) {
-    return <div className="deals-status">Loading this week's deals…</div>
+  const clearFilters = () => {
+    setSearch('')
+    setCategory('all')
   }
 
-  if (error) {
-    return <div className="deals-status deals-status--error">Couldn't load deals: {error}</div>
+  const handleStoreChange = (id: string) => {
+    persistStore(id)
+    setCategory('all')
   }
+
+  const [finderOpen, setFinderOpen] = useState(false)
+
+  const handleFinderSelect = (dealsStoreId: string) => {
+    handleStoreChange(dealsStoreId)
+    setFinderOpen(false)
+  }
+
+  const pillsRef = useRef<HTMLDivElement>(null)
+  const [scrollState, setScrollState] = useState({ left: false, right: false })
+
+  const updateScrollState = useCallback(() => {
+    const el = pillsRef.current
+    if (!el) return
+    setScrollState({
+      left: el.scrollLeft > 4,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+    })
+  }, [])
+
+  useEffect(() => {
+    updateScrollState()
+    window.addEventListener('resize', updateScrollState)
+    return () => window.removeEventListener('resize', updateScrollState)
+  }, [categories, updateScrollState])
 
   return (
     <div className="deals-page">
-      <header className="deals-header">
-        <h1>This Week's ShopRite Deals</h1>
-        {asOf && (
-          <p className="deals-asof">
-            Prices as of{' '}
-            {new Date(asOf).toLocaleDateString(undefined, {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </p>
-        )}
-      </header>
+      <div className="deals-sticky-bar">
+        <header className="deals-header">
+          <h1>This Week's ShopRite Deals</h1>
+          {asOf && (
+            <p className="deals-asof">
+              Prices as of{' '}
+              {new Date(asOf).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
+          )}
+        </header>
 
-      <div className="deals-controls">
-        <input
-          type="search"
+        <div className="deals-store-row">
+          {storeOptions.length > 0 && selectedStore && (
+            <StoreSelect value={selectedStore} options={storeOptions} onChange={handleStoreChange} />
+          )}
+          <button
+            type="button"
+            className="deals-find-store-btn"
+            onClick={() => setFinderOpen((open) => !open)}
+          >
+            {finderOpen ? 'Cancel' : 'Find your store'}
+          </button>
+        </div>
+
+        {finderOpen && (
+          <StoreFinder apiBase={API_BASE} onSelect={handleFinderSelect} onClose={() => setFinderOpen(false)} />
+        )}
+
+        <SearchInput
           placeholder="Search deals…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           aria-label="Search deals"
         />
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          aria-label="Filter by category"
-        >
-          <option value="all">All categories</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+
+        {categories.length > 0 && (
+          <div
+            className={`deals-category-scroll${scrollState.left ? ' can-scroll-left' : ''}${
+              scrollState.right ? ' can-scroll-right' : ''
+            }`}
+          >
+            <div
+              className="deals-category-pills"
+              role="group"
+              aria-label="Filter by category"
+              ref={pillsRef}
+              onScroll={updateScrollState}
+            >
+              <CategoryPill label="All" active={category === 'all'} onClick={() => setCategory('all')} />
+              {categories.map((c) => (
+                <CategoryPill key={c} label={c} active={category === c} onClick={() => setCategory(c)} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {grouped.length === 0 && <p className="deals-empty">No deals match your search.</p>}
+      <div className="deals-content">
+        {loading && <DealsGridSkeleton />}
 
-      {grouped.map(([categoryName, categoryItems]) => (
-        <section key={categoryName} className="deals-category">
-          <h2>{categoryName}</h2>
-          <div className="deals-grid">
-            {categoryItems.map((item) => (
-              <article key={item.id} className="deal-card">
-                <h3>{item.name}</h3>
-                <div className="deal-card-price">
-                  {item.sale_price != null && (
-                    <span className="deal-card-price-sale">${item.sale_price.toFixed(2)}</span>
-                  )}
-                  {item.price_per_unit && (
-                    <span className="deal-card-price-unit">{item.price_per_unit}</span>
-                  )}
-                </div>
-                {item.store_id && <div className="deal-card-store">Store #{item.store_id}</div>}
-              </article>
-            ))}
-          </div>
-        </section>
-      ))}
+        {!loading && error && (
+          <EmptyState
+            tone="error"
+            title="Couldn't load deals"
+            message={error}
+            action={
+              <Button variant="secondary" onClick={() => window.location.reload()}>
+                Try again
+              </Button>
+            }
+          />
+        )}
+
+        {!loading && !error && grouped.length === 0 && (
+          <EmptyState
+            title="No deals match your search"
+            message="Try a different search term or clear the category filter."
+            action={
+              <Button variant="secondary" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            }
+          />
+        )}
+
+        {!loading &&
+          !error &&
+          grouped.map(([categoryName, categoryItems]) => (
+            <section key={categoryName} className="deals-category">
+              <h2>{categoryName}</h2>
+              <div className="deals-grid">
+                {categoryItems.map((item) => {
+                  const percentOff =
+                    item.sale_price != null && item.regular_price != null && item.regular_price > item.sale_price
+                      ? Math.round((1 - item.sale_price / item.regular_price) * 100)
+                      : null
+                  return (
+                    <Card as="article" key={item.id} className="deal-card">
+                      {/* Absolutely positioned so a missing badge never reflows
+                          the card - see design feedback round 1 item 4. */}
+                      <div className="deal-card-badge-slot">
+                        {percentOff != null && percentOff > 0 && (
+                          <span className="price-tag-badge">-{percentOff}%</span>
+                        )}
+                      </div>
+                      <h3>{item.name}</h3>
+                      <PriceTag
+                        salePrice={item.sale_price}
+                        regularPrice={item.regular_price}
+                        pricePerUnit={item.price_per_unit}
+                      />
+                    </Card>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+      </div>
     </div>
   )
 }

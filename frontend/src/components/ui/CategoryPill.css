@@ -1,0 +1,31 @@
+.category-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: var(--tap-target-min);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.category-pill--active {
+  background: var(--color-teal-500);
+  border-color: var(--color-teal-500);
+  color: var(--color-text-on-brand);
+}
+
+@media (hover: hover) {
+  .category-pill:not(.category-pill--active):hover {
+    border-color: var(--color-teal-500);
+    color: var(--color-teal-700);
+  }
+}

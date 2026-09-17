@@ -1,0 +1,12 @@
+.ui-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-base);
+}
+
+@media (hover: hover) {
+  .ui-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+}

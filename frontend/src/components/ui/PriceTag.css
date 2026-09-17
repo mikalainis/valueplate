@@ -1,0 +1,67 @@
+/* Savings color (--color-berry-*) is reserved to this component's sale
+   price and discount badge - it should never appear anywhere that isn't
+   directly about money the user is saving. */
+
+.price-tag {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.price-tag-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.price-tag-sale {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-heavy);
+  color: var(--color-berry-600);
+  line-height: var(--line-height-tight);
+}
+
+/* BOGO/promo text tends to be much longer than a price ("BUY 1 GET 1 FREE") -
+   drop a size to keep it from wrapping across most of the card. */
+.price-tag-sale--promo {
+  font-size: var(--text-sm);
+}
+
+.price-tag-each {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.price-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-berry-500);
+  color: var(--color-text-on-brand);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Reserved-height slots: present or not, these keep every card in a row the
+   same height instead of reflowing as regular_price/unit data coverage
+   varies item to item (see design feedback round 1 item 4). */
+.price-tag-regular-slot,
+.price-tag-unit-slot {
+  display: block;
+  min-height: calc(var(--text-xs) * var(--line-height-base));
+}
+
+.price-tag-regular {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.price-tag-unit {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}

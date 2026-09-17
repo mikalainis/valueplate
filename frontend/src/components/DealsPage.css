@@ -1,130 +1,164 @@
 .deals-page {
-  max-width: 960px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 1rem;
+}
+
+.deals-sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .deals-header {
   text-align: center;
-  margin-bottom: 1.25rem;
 }
 
 .deals-header h1 {
-  font-size: 1.4rem;
-  color: #1b4332;
-  margin: 0 0 0.25rem;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-heavy);
+  color: var(--color-text);
 }
 
 .deals-asof {
-  color: #666;
-  font-size: 0.85rem;
-  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  margin-top: 2px;
 }
 
-.deals-controls {
+.deals-store-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  align-items: center;
+  gap: var(--space-3);
 }
 
-@media (min-width: 480px) {
-  .deals-controls {
-    flex-direction: row;
-  }
+.deals-find-store-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-teal-700);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  padding: var(--space-1);
 }
 
-.deals-controls input,
-.deals-controls select {
-  flex: 1;
-  padding: 0.7rem 0.85rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background: white;
+.deals-category-scroll {
+  position: relative;
+}
+
+.deals-category-pills {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: 2px;
+  /* Hide scrollbar visually while staying scrollable/swipeable by thumb */
+  scrollbar-width: none;
+}
+
+.deals-category-pills::-webkit-scrollbar {
+  display: none;
+}
+
+/* Edge fades signal there are more pills to scroll to - only shown on the
+   side(s) that actually have more content (see design feedback round 1
+   item 3). */
+.deals-category-scroll::before,
+.deals-category-scroll::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 2px;
+  width: 32px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.deals-category-scroll::before {
+  left: 0;
+  background: linear-gradient(to right, var(--color-bg), transparent);
+}
+
+.deals-category-scroll::after {
+  right: 0;
+  background: linear-gradient(to left, var(--color-bg), transparent);
+}
+
+.deals-category-scroll.can-scroll-left::before {
+  opacity: 1;
+}
+
+.deals-category-scroll.can-scroll-right::after {
+  opacity: 1;
+}
+
+.deals-content {
+  padding: var(--space-4);
 }
 
 .deals-category h2 {
-  font-size: 1.05rem;
-  color: #2d6a4f;
-  border-bottom: 2px solid #d8f3dc;
-  padding-bottom: 0.35rem;
-  margin: 1.5rem 0 0.75rem;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-teal-700);
+  margin: var(--space-6) 0 var(--space-3);
+}
+
+.deals-category:first-child h2 {
+  margin-top: var(--space-2);
 }
 
 .deals-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 480px) {
   .deals-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 768px) {
   .deals-grid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
+@media (min-width: 1024px) {
+  .deals-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
 .deal-card {
-  background: white;
-  border: 1px solid #eee;
-  border-radius: 10px;
-  padding: 0.85rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  position: relative;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .deal-card h3 {
-  font-size: 0.88rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem;
-  line-height: 1.3;
-  min-height: 2.6em;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  min-height: 2.4em;
+  /* Leaves room so a top-right badge never overlaps the title text. */
+  padding-right: var(--space-6);
   overflow: hidden;
-  color: #222;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
-.deal-card-price {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.deal-card-price-sale {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #2d6a4f;
-}
-
-.deal-card-price-unit {
-  font-size: 0.75rem;
-  color: #888;
-}
-
-.deal-card-store {
-  margin-top: 0.4rem;
-  font-size: 0.7rem;
-  color: #999;
-}
-
-.deals-status {
-  text-align: center;
-  padding: 3rem 1rem;
-  font-size: 1rem;
-  color: #555;
-}
-
-.deals-status--error {
-  color: #b00020;
-}
-
-.deals-empty {
-  text-align: center;
-  color: #888;
-  padding: 2rem 0;
+.deal-card-badge-slot {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
 }

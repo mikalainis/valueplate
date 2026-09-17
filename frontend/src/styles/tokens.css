@@ -1,0 +1,98 @@
+/*
+  Value Plate design tokens.
+  Brand carried over from the original prototype (teal + berry, Plus Jakarta
+  Sans, soft shadows, rounded cards) - see docs/existing-infrastructure.md
+  and git history for the source styling this was extracted from.
+
+  Color roles are intentional, not decorative:
+    --color-teal-*   primary brand / interactive (buttons, links, active states, focus)
+    --color-berry-*  RESERVED for savings & deals only (sale price, % off badge,
+                     "you saved" copy) - never used for anything else, so it
+                     always reads as "this is money you're saving."
+    --color-ink-*    neutral text/background scale
+
+  Breakpoints (no CSS var equivalent for media queries, documented here):
+    375px  - base / smallest supported phone
+    480px  - large phone
+    768px  - tablet
+    1024px - desktop
+*/
+
+:root {
+  /* ---- Brand color ---- */
+  --color-teal-50: #e7f3f3;
+  --color-teal-100: #cfe7e7;
+  --color-teal-500: #008080; /* primary - verified 4.77:1 on white, passes AA */
+  --color-teal-600: #046a6a; /* hover/active state, extra contrast margin */
+  --color-teal-700: #045454;
+
+  /* Reserved exclusively for savings/deals - do not reuse elsewhere */
+  --color-berry-50: #fbeaf0;
+  --color-berry-100: #f4cdda;
+  --color-berry-500: #ad3b5d; /* verified 5.9:1 on white */
+  --color-berry-600: #8f2f4c;
+
+  /* ---- Neutrals ---- */
+  --color-bg: #f5f8f8;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #eef3f3;
+  --color-border: #e2eaea;
+  --color-text: #1a1c1d;
+  /* Prototype's #7f8c8d only hits ~3.5:1 on white; darkened to clear 4.5:1 AA */
+  --color-text-muted: #5b6667;
+  --color-text-on-brand: #ffffff;
+
+  --color-danger: #b3261e;
+  --color-danger-bg: #fbe9e8;
+
+  /* ---- Type ---- */
+  --font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --text-xs: 0.75rem;   /* 12px */
+  --text-sm: 0.8125rem; /* 13px */
+  --text-base: 0.9375rem; /* 15px */
+  --text-md: 1.0625rem; /* 17px */
+  --text-lg: 1.25rem;   /* 20px */
+  --text-xl: 1.5rem;    /* 24px */
+  --text-2xl: 1.875rem; /* 30px */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 600;
+  --font-weight-bold: 700;
+  --font-weight-heavy: 800;
+
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+
+  /* ---- Spacing (4px base unit) ---- */
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+
+  /* ---- Radii ---- */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* ---- Shadows (soft, warm - never pure black) ---- */
+  --shadow-sm: 0 2px 8px rgba(23, 41, 41, 0.06);
+  --shadow-md: 0 8px 24px rgba(23, 41, 41, 0.08);
+  --shadow-lg: 0 12px 35px rgba(23, 41, 41, 0.1);
+
+  /* ---- Layout ---- */
+  --tap-target-min: 44px;
+  --bottom-nav-height: 64px;
+  --page-max-width: 1080px;
+
+  /* ---- Motion ---- */
+  --transition-fast: 150ms ease;
+  --transition-base: 220ms ease;
+}

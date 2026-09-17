@@ -1,0 +1,38 @@
+.search-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-height: var(--tap-target-min);
+}
+
+.search-input-icon {
+  position: absolute;
+  left: var(--space-4);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.search-input input {
+  width: 100%;
+  height: var(--tap-target-min);
+  padding: 0 var(--space-4) 0 calc(var(--space-4) * 2 + 18px);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-base);
+}
+
+.search-input input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.search-input input:focus-visible {
+  border-color: var(--color-teal-500);
+}
+
+/* iOS adds a default cancel/search decoration; keep our own icon only */
+.search-input input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}

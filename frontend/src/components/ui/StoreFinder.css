@@ -1,0 +1,122 @@
+.store-finder {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.store-finder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.store-finder-header h2 {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.store-finder-close {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.store-finder-form {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.store-finder-form input {
+  flex: 1;
+  min-height: var(--tap-target-min);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-family: inherit;
+}
+
+.store-finder-form input:focus-visible {
+  border-color: var(--color-teal-500);
+}
+
+.store-finder-error {
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+.store-finder-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.store-finder-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.store-finder-result-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.store-finder-result-name {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.store-finder-result-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.store-finder-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.store-finder-unavailable-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.store-finder-request-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-teal-700);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.store-finder-requested {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-teal-700);
+  flex: 0 0 auto;
+}

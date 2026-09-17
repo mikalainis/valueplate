@@ -12,7 +12,13 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env.local")
 
 # Import your existing logic
 from app.logic.nutrition_calculator import NutritionCalculator, FamilyMember, NutritionNeeds
-from app.logic.deals_repository import fetch_deals, fetch_last_scrape_time
+from app.logic.deals_repository import (
+    fetch_active_store_ids,
+    fetch_deals,
+    fetch_last_scrape_time,
+    fetch_stores,
+)
+from app.logic.stores_repository import log_store_request, search_stores_by_zip
 
 app = FastAPI()
 calc = NutritionCalculator()
@@ -22,7 +28,7 @@ calc = NutritionCalculator()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -58,6 +64,37 @@ class DealsResponse(BaseModel):
     as_of: Optional[str] = None
 
 
+class StoreItem(BaseModel):
+    id: str
+    name: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+
+
+class StoresResponse(BaseModel):
+    items: List[StoreItem]
+
+
+class StoreSearchResult(BaseModel):
+    id: str
+    deals_store_id: Optional[str] = None
+    name: str
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip: str
+    distance_miles: float
+    has_deals: bool
+
+
+class StoreSearchResponse(BaseModel):
+    items: List[StoreSearchResult]
+
+
+class StoreRequestBody(BaseModel):
+    store_id: str
+    zip: str
+
+
 @app.get("/api/deals", response_model=DealsResponse)
 async def get_deals(
     category: Optional[str] = None,
@@ -83,6 +120,42 @@ async def get_deals(
         total=len(matches),
         as_of=fetch_last_scrape_time(),
     )
+
+@app.get("/api/stores", response_model=StoresResponse)
+async def get_stores():
+    """
+    Stores that currently have items in `grocery_sales`, resolved against the
+    `stores` collection for human-readable names/locations. Data spans a
+    handful of stores today - see docs/existing-infrastructure.md §2.
+    """
+    store_ids = fetch_active_store_ids()
+    stores = fetch_stores(store_ids)
+    return StoresResponse(items=[StoreItem(**s) for s in stores])
+
+
+@app.get("/api/stores/search", response_model=StoreSearchResponse)
+async def get_stores_search(zip: str, limit: int = 10):
+    """
+    Nearest stores to a zip code, sorted by distance. Distance is computed
+    zip-centroid to zip-centroid (see app/logic/stores_repository.py) - no
+    paid geocoding API, no per-store lat/lng needed. Stores with no `zip` on
+    file are excluded rather than guessed at (see docs/spec.md §3 audit).
+    `has_deals` reconciles the stores-collection id against the zero-padded
+    id grocery_sales actually uses.
+    """
+    limit = max(1, min(limit, 50))
+    try:
+        results = search_stores_by_zip(zip.strip(), limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return StoreSearchResponse(items=[StoreSearchResult(**r) for r in results])
+
+
+@app.post("/api/stores/request", status_code=204)
+async def post_store_request(body: StoreRequestBody):
+    """Logs interest in a not-yet-scraped store so we know what to add next."""
+    log_store_request(body.store_id, body.zip)
+
 
 @app.post("/generate-optimized-plan")
 async def generate_plan(

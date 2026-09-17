@@ -8,6 +8,7 @@ from app.firestore_client import get_firestore_client
 # ingestion pipeline adds them.
 GROCERY_SALES_COLLECTION = "grocery_sales"
 METADATA_DOC = ("metadata", "summary")
+STORES_COLLECTION = "stores"
 
 
 def _as_str(value: object) -> Optional[str]:
@@ -43,9 +44,18 @@ def fetch_deals(
     results = []
     for doc in docs:
         data = doc.to_dict() or {}
+        doc_store_id = data.get("store_id")
+
+        # `grocery_sales` currently has a second, incompatible document shape
+        # mixed in (a different retailer's rows, keyed by zip code rather than
+        # a ShopRite store id - see docs/spec.md §3 "Actual Firestore schema").
+        # Every genuine ShopRite row has a store_id; skip anything that doesn't
+        # rather than surfacing it as a blank-name/blank-price card.
+        if doc_store_id is None:
+            continue
+
         name = data.get("name") or ""
         doc_category = data.get("category")
-        doc_store_id = data.get("store_id")
 
         if category_filter and (doc_category or "").strip().lower() != category_filter:
             continue
@@ -72,6 +82,47 @@ def fetch_deals(
         )
 
     results.sort(key=lambda item: ((item["category"] or "￿"), item["name"]))
+    return results
+
+
+def fetch_active_store_ids() -> list[str]:
+    db = get_firestore_client()
+    docs = db.collection(GROCERY_SALES_COLLECTION).select(["store_id"]).stream()
+    ids = {(doc.to_dict() or {}).get("store_id") for doc in docs}
+    ids.discard(None)
+    return sorted(ids)
+
+
+def _normalize_store_doc_id(store_id: str) -> str:
+    # `grocery_sales.store_id` is zero-padded (e.g. "0840") but `stores` doc ids
+    # are not (e.g. "840") - see docs/existing-infrastructure.md §2.
+    return store_id.lstrip("0") or store_id
+
+
+def fetch_stores(store_ids: list[str]) -> list[dict]:
+    """Resolve grocery_sales store ids against the `stores` collection.
+
+    Not every active store_id has a matching `stores` doc (e.g. "0834"/"0840"
+    don't exist there today) - those come back with name/city/state = None so
+    callers can fall back to a "Store #{id}" label.
+    """
+    db = get_firestore_client()
+    collection = db.collection(STORES_COLLECTION)
+
+    results = []
+    for store_id in store_ids:
+        doc = collection.document(_normalize_store_doc_id(store_id)).get()
+        data = doc.to_dict() if doc.exists else None
+        results.append(
+            {
+                "id": store_id,
+                "name": _as_str(data.get("name")) if data else None,
+                "city": _as_str(data.get("city")) if data else None,
+                "state": _as_str(data.get("state")) if data else None,
+            }
+        )
+
+    results.sort(key=lambda s: s["name"] or f"￿{s['id']}")
     return results
 
 
