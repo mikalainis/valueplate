@@ -51,6 +51,7 @@ class DealItem(BaseModel):
     store_id: Optional[str] = None
     sale_price: Optional[float] = None
     regular_price: Optional[float] = None
+    is_deal: bool = False
     unit: Optional[str] = None
     price_per_unit: Optional[str] = None
     image_url: Optional[str] = None
@@ -100,19 +101,20 @@ async def get_deals(
     category: Optional[str] = None,
     q: Optional[str] = None,
     store_id: Optional[str] = None,
+    on_sale: Optional[bool] = None,
     limit: int = 50,
     offset: int = 0,
 ):
     """
-    Sale items from the existing shoprite_sales scrape (Firestore `grocery_sales`
-    — see docs/existing-infrastructure.md). No Postgres/§3 schema exists yet, so
-    this reads Firestore directly; regular_price/valid_from/valid_to are always
-    None today because the current scrape output doesn't carry them.
+    Sale items from `sales_v2` (devops/scraper/main.py's rewritten ShopRite
+    scraper). Pass on_sale=true to get only items that are actually marked
+    down (regular_price > price, or an active tprPrice window) rather than
+    the full catalog.
     """
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
 
-    matches = fetch_deals(category=category, q=q, store_id=store_id)
+    matches = fetch_deals(category=category, q=q, store_id=store_id, on_sale=on_sale)
     page = matches[offset : offset + limit]
 
     return DealsResponse(
@@ -124,9 +126,8 @@ async def get_deals(
 @app.get("/api/stores", response_model=StoresResponse)
 async def get_stores():
     """
-    Stores that currently have items in `grocery_sales`, resolved against the
-    `stores` collection for human-readable names/locations. Data spans a
-    handful of stores today - see docs/existing-infrastructure.md §2.
+    Stores that currently have items in `sales_v2`, resolved against the
+    `stores` collection for human-readable names/locations.
     """
     store_ids = fetch_active_store_ids()
     stores = fetch_stores(store_ids)
