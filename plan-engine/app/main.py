@@ -54,6 +54,8 @@ class DealItem(BaseModel):
     is_deal: bool = False
     unit: Optional[str] = None
     price_per_unit: Optional[str] = None
+    unit_price: Optional[float] = None
+    unit_price_unit: Optional[str] = None
     image_url: Optional[str] = None
     valid_from: Optional[str] = None
     valid_to: Optional[str] = None

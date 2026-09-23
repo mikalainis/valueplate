@@ -33,6 +33,62 @@ def _as_float(value: object) -> Optional[float]:
         return None
 
 
+# ShopRite's own unitOfSize.abbreviation is inconsistent within a category
+# (milk shows up as both "gal" and "fl oz" depending on the specific SKU) -
+# convert everything within a unit_class to one canonical display unit per
+# category so items are directly comparable.
+_WEIGHT_TO_OZ = {"oz": 1.0, "lb": 16.0}
+_VOLUME_TO_FLOZ = {"fl oz": 1.0, "gal": 128.0, "qt": 32.0, "pt": 16.0}
+_COUNT_UNITS = {"each", "ea", "ct"}
+_WEIGHT_BY_POUND_CATEGORIES = {"seafood", "meat", "meat & seafood"}
+
+
+def _unit_class(size_unit: Optional[str]) -> Optional[str]:
+    if size_unit in _WEIGHT_TO_OZ:
+        return "weight"
+    if size_unit in _VOLUME_TO_FLOZ:
+        return "volume"
+    if size_unit in _COUNT_UNITS:
+        return "count"
+    return None
+
+
+def _canonical_unit(category: Optional[str], unit_class: str) -> Optional[str]:
+    if unit_class == "volume":
+        return "gal"
+    if unit_class == "count":
+        return "each"
+    if unit_class == "weight":
+        is_meat = (category or "").strip().lower() in _WEIGHT_BY_POUND_CATEGORIES
+        return "lb" if is_meat else "oz"
+    return None
+
+
+def normalize_unit_price(
+    category: Optional[str], size_value: Optional[float], size_unit: Optional[str], price: Optional[float]
+) -> tuple[Optional[float], Optional[str]]:
+    """Convert to a canonical $/unit for the item's category, from the raw
+    size_value/size_unit/price - never from ShopRite's own price_per_unit
+    string (see docs on why that field mixes deal-type text with real units).
+    Returns (None, None) when size_value/size_unit/price aren't usable."""
+    uclass = _unit_class(size_unit)
+    if uclass is None or size_value is None or price is None or size_value <= 0:
+        return None, None
+
+    canonical = _canonical_unit(category, uclass)
+    if uclass == "weight":
+        oz = size_value * _WEIGHT_TO_OZ[size_unit]
+        canon_size = oz if canonical == "oz" else oz / 16.0
+    elif uclass == "volume":
+        canon_size = (size_value * _VOLUME_TO_FLOZ[size_unit]) / 128.0  # gal
+    else:
+        canon_size = size_value  # count - already "each"-equivalent
+
+    if not canon_size:
+        return None, None
+    return round(price / canon_size, 4), canonical
+
+
 def fetch_deals(
     category: Optional[str] = None,
     q: Optional[str] = None,
@@ -68,6 +124,11 @@ def fetch_deals(
         if on_sale and not is_deal:
             continue
 
+        sale_price = _as_float(data.get("price"))
+        unit_price, unit_price_unit = normalize_unit_price(
+            doc_category, data.get("size_value"), data.get("size_unit"), sale_price
+        )
+
         results.append(
             {
                 "id": doc.id,
@@ -75,11 +136,13 @@ def fetch_deals(
                 "brand": _as_str(data.get("brand")),
                 "category": doc_category,
                 "store_id": doc_store_id,
-                "sale_price": _as_float(data.get("price")),
+                "sale_price": sale_price,
                 "regular_price": _as_float(data.get("regular_price")),
                 "is_deal": is_deal,
                 "unit": _as_str(data.get("size_unit")),
                 "price_per_unit": _as_str(data.get("price_per_unit")),
+                "unit_price": unit_price,
+                "unit_price_unit": unit_price_unit,
                 "image_url": _as_str(data.get("image_url")),
                 "valid_from": _as_iso(data.get("valid_from")),
                 "valid_to": _as_iso(data.get("valid_to")),
