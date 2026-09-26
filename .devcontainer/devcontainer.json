@@ -4,9 +4,10 @@
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.12"
-    }
+    },
+    "ghcr.io/devcontainers/features/git-lfs:1": {}
   },
-  "postCreateCommand": "npm ci --prefix frontend && python3 -m venv plan-engine/.venv && plan-engine/.venv/bin/pip install -r plan-engine/requirements.txt",
+  "postCreateCommand": "npm install -g @google/gemini-cli && npm ci --prefix frontend && python3 -m venv plan-engine/.venv && plan-engine/.venv/bin/pip install -r plan-engine/requirements.txt",
   "postAttachCommand": "bash scripts/dev-start.sh",
   "forwardPorts": [8000, 5173],
   "portsAttributes": {
@@ -15,6 +16,11 @@
     },
     "5173": {
       "label": "frontend (Vite)"
+    }
+  },
+  "secrets": {
+    "GEMINI_API_KEY": {
+      "description": "Gemini API key from Google AI Studio"
     }
   }
 }
