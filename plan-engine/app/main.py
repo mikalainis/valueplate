@@ -4,13 +4,16 @@ from typing import List, Optional
 import redis
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from google.auth.exceptions import DefaultCredentialsError
 from pydantic import BaseModel
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env.local")
 
 # Import your existing logic
+from app.firestore_client import FirestoreCredentialsError
 from app.logic.nutrition_calculator import NutritionCalculator, FamilyMember, NutritionNeeds
 from app.logic.deals_repository import (
     fetch_active_store_ids,
@@ -22,6 +25,14 @@ from app.logic.stores_repository import log_store_request, search_stores_by_zip
 
 app = FastAPI()
 calc = NutritionCalculator()
+
+@app.exception_handler(FirestoreCredentialsError)
+@app.exception_handler(DefaultCredentialsError)
+async def firestore_credentials_error_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": f"Firestore credentials unavailable: {exc}"},
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -119,14 +130,20 @@ async def get_deals(
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
 
-    matches = fetch_deals(category=category, q=q, store_id=store_id, on_sale=on_sale)
-    page = matches[offset : offset + limit]
+    try:
+        matches = fetch_deals(category=category, q=q, store_id=store_id, on_sale=on_sale)
+        page = matches[offset : offset + limit]
 
-    return DealsResponse(
-        items=[DealItem(**item) for item in page],
-        total=len(matches),
-        as_of=fetch_last_scrape_time(),
-    )
+        return DealsResponse(
+            items=[DealItem(**item) for item in page],
+            total=len(matches),
+            as_of=fetch_last_scrape_time(),
+        )
+    except (FirestoreCredentialsError, DefaultCredentialsError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Firestore credentials unavailable: {exc}",
+        )
 
 @app.get("/api/stores", response_model=StoresResponse)
 async def get_stores():
@@ -134,9 +151,15 @@ async def get_stores():
     Stores that currently have items in `sales_v2`, resolved against the
     `stores` collection for human-readable names/locations.
     """
-    store_ids = fetch_active_store_ids()
-    stores = fetch_stores(store_ids)
-    return StoresResponse(items=[StoreItem(**s) for s in stores])
+    try:
+        store_ids = fetch_active_store_ids()
+        stores = fetch_stores(store_ids)
+        return StoresResponse(items=[StoreItem(**s) for s in stores])
+    except (FirestoreCredentialsError, DefaultCredentialsError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Firestore credentials unavailable: {exc}",
+        )
 
 
 @app.get("/api/stores/search", response_model=StoreSearchResponse)
@@ -152,6 +175,11 @@ async def get_stores_search(zip: str, limit: int = 10):
     limit = max(1, min(limit, 50))
     try:
         results = search_stores_by_zip(zip.strip(), limit=limit)
+    except (FirestoreCredentialsError, DefaultCredentialsError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Firestore credentials unavailable: {exc}",
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return StoreSearchResponse(items=[StoreSearchResult(**r) for r in results])

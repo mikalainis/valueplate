@@ -47,7 +47,9 @@ build/Release
 # Dependency directories
 node_modules/
 
-# Python bytecode cache
+# Python virtual environments & bytecode cache
+.venv/
+plan-engine/.venv/
 __pycache__/
 *.pyc
 
@@ -74,3 +76,6 @@ __pycache__/
 # dataconnect generated files
 .dataconnect
 *-pastedcontent-*.txt
+.env
+.env.local
+.env.*.local
