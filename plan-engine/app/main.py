@@ -23,11 +23,14 @@ from app.logic.stores_repository import log_store_request, search_stores_by_zip
 app = FastAPI()
 calc = NutritionCalculator()
 
-# Local dev only: allow the Vite dev server to call this API directly.
-# Tighten this before deploying anywhere real.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://valueplate.us",
+        "https://www.valueplate.us",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
