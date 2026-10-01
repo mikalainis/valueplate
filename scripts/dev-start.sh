@@ -11,6 +11,18 @@ port_in_use() {
   (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && exec 3>&- 3<&-
 }
 
+load_codespaces_secrets() {
+  local f=/workspaces/.codespaces/shared/.env-secrets
+  [ -r "$f" ] || return 0
+  local key val
+  for key in GOOGLE_SERVICE_ACCOUNT_JSON GEMINI_API_KEY; do
+    [ -n "${!key:-}" ] && continue
+    val=$(grep -m1 "^${key}=" "$f" | cut -d= -f2-) || true
+    [ -n "$val" ] && export "$key=$(printf '%s' "$val" | base64 -d)"
+  done
+  return 0
+}
+
 ensure_plan_engine_venv() {
   local venv_dir="$REPO_ROOT/plan-engine/.venv"
   local venv_py="$venv_dir/bin/python3"
@@ -28,6 +40,8 @@ ensure_plan_engine_venv() {
   fi
   return 0
 }
+
+load_codespaces_secrets
 
 if port_in_use 8000; then
   echo "plan-engine: port 8000 already in use, skipping"
