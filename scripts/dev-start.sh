@@ -11,8 +11,42 @@ port_in_use() {
   (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && exec 3>&- 3<&-
 }
 
+load_codespaces_secrets() {
+  local f=/workspaces/.codespaces/shared/.env-secrets
+  [ -r "$f" ] || return 0
+  local key val
+  for key in GOOGLE_SERVICE_ACCOUNT_JSON GEMINI_API_KEY; do
+    [ -n "${!key:-}" ] && continue
+    val=$(grep -m1 "^${key}=" "$f" | cut -d= -f2-) || true
+    [ -n "$val" ] && export "$key=$(printf '%s' "$val" | base64 -d)"
+  done
+  return 0
+}
+
+ensure_plan_engine_venv() {
+  local venv_dir="$REPO_ROOT/plan-engine/.venv"
+  local venv_py="$venv_dir/bin/python3"
+  local venv_uvicorn="$venv_dir/bin/uvicorn"
+  if [ ! -x "$venv_py" ] || [ ! -x "$venv_uvicorn" ] || ! "$venv_py" -c "import uvicorn, fastapi" >/dev/null 2>&1; then
+    echo "plan-engine: .venv is missing or broken, recreating..."
+    if ! python3 -m venv --clear "$venv_dir"; then
+      echo "plan-engine: ERROR: Failed to create virtual environment at $venv_dir" >&2
+      return 1
+    fi
+    if ! "$venv_dir/bin/pip" install -r "$REPO_ROOT/plan-engine/requirements.txt"; then
+      echo "plan-engine: ERROR: pip install failed for $REPO_ROOT/plan-engine/requirements.txt" >&2
+      return 1
+    fi
+  fi
+  return 0
+}
+
+load_codespaces_secrets
+
 if port_in_use 8000; then
   echo "plan-engine: port 8000 already in use, skipping"
+elif ! ensure_plan_engine_venv; then
+  echo "plan-engine: skipping startup due to virtual environment setup failure" >&2
 else
   echo "plan-engine: starting on port 8000 (log: $LOG_DIR/plan-engine.log)"
   (
