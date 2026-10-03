@@ -126,6 +126,11 @@ class StoreRequestBody(BaseModel):
     }
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "plan-engine"}
+
+
 @app.get("/api/deals", response_model=DealsResponse)
 async def get_deals(
     category: Optional[str] = None,
