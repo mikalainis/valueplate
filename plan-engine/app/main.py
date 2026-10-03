@@ -23,7 +23,12 @@ from app.logic.deals_repository import (
 )
 from app.logic.stores_repository import log_store_request, search_stores_by_zip
 
-app = FastAPI()
+is_dev = os.getenv("ENV", "").lower() == "dev"
+app = FastAPI(
+    docs_url="/docs" if is_dev else None,
+    redoc_url="/redoc" if is_dev else None,
+    openapi_url="/openapi.json" if is_dev else None,
+)
 calc = NutritionCalculator()
 
 @app.exception_handler(FirestoreCredentialsError)
